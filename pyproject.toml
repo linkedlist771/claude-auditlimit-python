@@ -1,0 +1,13 @@
+[project]
+name = "claude-auditlimit-python"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "apscheduler>=3.11.0",
+    "fastapi>=0.115.6",
+    "python-docx>=1.1.2",
+    "pytz>=2024.2",
+    "tiktoken>=0.8.0",
+]
