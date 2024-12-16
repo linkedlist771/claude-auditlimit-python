@@ -1,5 +1,6 @@
 # router.py
 from json import JSONDecodeError
+from loguru import logger
 
 from fastapi import APIRouter, HTTPException
 from fastapi import Request
@@ -7,15 +8,12 @@ from fastapi.responses import JSONResponse
 
 from datetime import datetime
 
-from claude_auditlimit_python.configs import MAX_DEVICES
+from claude_auditlimit_python.configs import MAX_DEVICES, RATE_LIMIT
 from claude_auditlimit_python.redis_manager.device_manager import DeviceManager
 from claude_auditlimit_python.redis_manager.usage_manager import UsageManager
 from claude_auditlimit_python.utils.api_key_utils import remove_beamer
 
 router = APIRouter()
-
-# 这里就不用那么复杂了， 就几个功能。
-# @router.api_route("/example", methods=["GET", "POST"])
 
 
 @router.get("/")
@@ -64,8 +62,6 @@ async def audit_limit(request: Request):
             status_code=500,
             content={"error": {"message": f"Failed to verify device\n无法验证设备"}},
         )
-    # add usage
-
     # 获取请求内容
     try:
         request_data = await request.json()
@@ -92,7 +88,6 @@ async def audit_limit(request: Request):
                 # Get current usage stats
                 stats = await usage_manager.get_token_usage(api_key)
                 # Get configured limit from settings
-                RATE_LIMIT = 50  # Configure this value as needed
                 # Check 3-hour usage limit
                 used_3h = stats.last_3_hours
                 remaining = RATE_LIMIT - used_3h
@@ -121,14 +116,14 @@ async def audit_limit(request: Request):
                 # Increment usage if within limits
                 await usage_manager.increment_token_usage(api_key)
 
-                return JSONResponse(
-                    status_code=200,
-                    content={
-                        "message": "Request authorized",
-                        "remaining": remaining - 1,
-                    },
-                )
-
+                # return JSONResponse(
+                #     status_code=200,
+                #     content={
+                #         "message": "Request authorized",
+                #         "remaining": remaining - 1,
+                #     },
+                # )
+                return
             except Exception as e:
                 raise HTTPException(
                     status_code=500, detail=f"Error checking usage limits: {str(e)}"
@@ -137,16 +132,18 @@ async def audit_limit(request: Request):
     except JSONDecodeError:
         raise HTTPException(status_code=400, detail="Invalid JSON data")
 
+    return
 
-@router.get("/token_status")
-async def token_status(request: Request):
+
+@router.get("/token_stats")
+async def token_stats(request: Request):
     try:
         # Initialize usage manager
         usage_manager = UsageManager()
 
         # Get all token usage statistics
         usage_stats = await usage_manager.get_all_token_usage()
-
+        logger.debug(usage_stats)
         # Get current time
         now = datetime.now()
 
@@ -212,28 +209,37 @@ async def devices(request: Request):
 
 @router.get("/logout")
 async def logout(request: Request):
-    api_key = request.headers.get("Authorization")
-    if api_key:
-        api_key = remove_beamer(api_key)
+    try:
+        api_key = request.headers.get("Authorization")
+        if api_key:
+            api_key = remove_beamer(api_key)
 
-    host = (
-        request.headers.get("X-Forwarded-Host")
-        if request.headers.get("X-Forwarded-Host")
-        else request.url.hostname
-    )
-    user_agent = request.headers.get("User-Agent")
+        host = (
+            request.headers.get("X-Forwarded-Host")
+            if request.headers.get("X-Forwarded-Host")
+            else request.url.hostname
+        )
+        user_agent = request.headers.get("User-Agent")
 
-    if not host or not user_agent:
-        raise HTTPException(status_code=400, detail="Host and User-Agent are required")
+        if not host or not user_agent:
+            raise HTTPException(
+                status_code=400, detail="Host and User-Agent are required"
+            )
 
-    device_identifier = user_agent
-    device_manager = DeviceManager()
-    success = await device_manager.remove_device(api_key, device_identifier)
+        device_identifier = user_agent
+        device_manager = DeviceManager()
+        success = await device_manager.remove_device(api_key, device_identifier)
 
-    if not success:
-        raise HTTPException(status_code=500, detail="Failed to logout device")
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to logout device")
 
-    return JSONResponse(content={"code": 0, "msg": "Device logged out successfully"})
+        return JSONResponse(
+            content={"code": 0, "msg": "Device logged out successfully"}
+        )
+    except:
+        from traceback import format_exc
+
+        logger.error(format_exc())
 
 
 @router.get("/all_token_devices")

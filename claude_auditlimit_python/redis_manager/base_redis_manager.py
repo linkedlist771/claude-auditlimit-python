@@ -1,11 +1,11 @@
 # base_redis_manager.py
 import json
 from redis.asyncio import Redis
-from claude_auditlimit_python.configs import REDIS_HOST, REDIS_PORT
+from claude_auditlimit_python.configs import REDIS_HOST, REDIS_PORT, REDIS_DB
 
 
 class BaseRedisManager:
-    def __init__(self, host=REDIS_HOST, port=REDIS_PORT, db=0):
+    def __init__(self, host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB):
         """Initialize the connection to Redis."""
         self.host = host
         self.port = port

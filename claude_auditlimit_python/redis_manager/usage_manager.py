@@ -5,7 +5,7 @@ import time
 from typing import Dict, Optional
 from pydantic import BaseModel
 
-from claude_auditlimit_python.configs import REDIS_PORT, REDIS_HOST
+from claude_auditlimit_python.configs import REDIS_PORT, REDIS_HOST, REDIS_DB
 from claude_auditlimit_python.redis_manager.base_redis_manager import BaseRedisManager
 
 
@@ -25,7 +25,7 @@ class UsageManager(BaseRedisManager):
     PERIOD_WEEK = "1w"
     PERIOD_TOTAL = "total"
 
-    def __init__(self, host=REDIS_HOST, port=REDIS_PORT, db=0):
+    def __init__(self, host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB):
         super().__init__(host, port, db)
 
     def _get_redis_key(self, token: str, period: str) -> str:
@@ -33,13 +33,11 @@ class UsageManager(BaseRedisManager):
 
     async def increment_token_usage(self, token: str, count: int = 1) -> None:
         redis = await self.get_aioredis()
-        pipe = redis.pipeline()
-        now = int(time.time())
 
-        # Increment total count by the specified amount
-        pipe.incrby(self._get_redis_key(token, self.PERIOD_TOTAL), count)
+        # Increment total count
+        await redis.incrby(self._get_redis_key(token, self.PERIOD_TOTAL), count)
 
-        # Add usage records for different time periods
+        # For each limited time period, increment or create key with expiry
         for period, expiry in [
             (self.PERIOD_3HOURS, 3 * 3600),
             (self.PERIOD_12HOURS, 12 * 3600),
@@ -47,51 +45,44 @@ class UsageManager(BaseRedisManager):
             (self.PERIOD_WEEK, 7 * 24 * 3600),
         ]:
             key = self._get_redis_key(token, period)
-            # Add the count as the score instead of the timestamp
-            pipe.zadd(key, {str(now): float(count)})
-            pipe.expire(key, expiry)
-
-        await pipe.execute()
+            # Check if key exists
+            exists = await redis.exists(key)
+            if not exists:
+                # Key doesn't exist, set initial value and expire
+                # 使用 set 命令直接初始化值，并设置过期时间
+                await redis.set(key, count, ex=expiry)
+            else:
+                # Key exists, just increment
+                await redis.incrby(key, count)
+                # 确保有效期仍然存在（可选，如果希望更新过期时间）
+                await redis.expire(key, expiry)
 
     async def get_token_usage(self, token: str) -> TokenUsageStats:
         redis = await self.get_aioredis()
-        pipe = redis.pipeline()
-        now = int(time.time())
 
-        # Calculate time boundaries
-        three_hours_ago = now - 3 * 3600
-        twelve_hours_ago = now - 12 * 3600
-        twenty_four_hours_ago = now - 24 * 3600
-        week_ago = now - 7 * 24 * 3600
-
-        # Prepare commands
         total_key = self._get_redis_key(token, self.PERIOD_TOTAL)
-        pipe.get(total_key)
+        total_val = await redis.get(total_key)
+        total = int(total_val) if total_val else 0
 
-        for period, time_ago in [
-            (self.PERIOD_3HOURS, three_hours_ago),
-            (self.PERIOD_12HOURS, twelve_hours_ago),
-            (self.PERIOD_24HOURS, twenty_four_hours_ago),
-            (self.PERIOD_WEEK, week_ago),
-        ]:
-            key = self._get_redis_key(token, period)
-            # Sum the scores (counts) for entries after the time threshold
-            pipe.zrangebyscore(key, time_ago, "+inf", withscores=True)
-
+        # 使用pipeline一次性获取所有周期值
+        pipe = redis.pipeline()
+        pipe.get(self._get_redis_key(token, self.PERIOD_3HOURS))
+        pipe.get(self._get_redis_key(token, self.PERIOD_12HOURS))
+        pipe.get(self._get_redis_key(token, self.PERIOD_24HOURS))
+        pipe.get(self._get_redis_key(token, self.PERIOD_WEEK))
         results = await pipe.execute()
 
-        # Calculate sums for each period
-        period_sums = []
-        for period_result in results[1:]:  # Skip the total count
-            period_sum = sum(score for _, score in period_result)
-            period_sums.append(int(period_sum))
+        last_3_hours = int(results[0]) if results[0] else 0
+        last_12_hours = int(results[1]) if results[1] else 0
+        last_24_hours = int(results[2]) if results[2] else 0
+        last_week = int(results[3]) if results[3] else 0
 
         return TokenUsageStats(
-            total=int(results[0] or 0),
-            last_3_hours=period_sums[0],
-            last_12_hours=period_sums[1],
-            last_24_hours=period_sums[2],
-            last_week=period_sums[3],
+            total=total,
+            last_3_hours=last_3_hours,
+            last_12_hours=last_12_hours,
+            last_24_hours=last_24_hours,
+            last_week=last_week,
         )
 
     async def get_all_token_usage(self) -> Dict[str, TokenUsageStats]:
@@ -107,19 +98,6 @@ class UsageManager(BaseRedisManager):
         return result
 
     async def cleanup_old_records(self) -> None:
-        redis = await self.get_aioredis()
-        now = int(time.time())
-
-        time_periods = {
-            self.PERIOD_3HOURS: now - 3 * 3600,
-            self.PERIOD_12HOURS: now - 12 * 3600,
-            self.PERIOD_24HOURS: now - 24 * 3600,
-            self.PERIOD_WEEK: now - 7 * 24 * 3600,
-        }
-
-        for period, cutoff_time in time_periods.items():
-            pattern = f"token:*:{period}"
-            keys = await redis.keys(pattern)
-
-            for key in keys:
-                await redis.zremrangebyscore(key, "-inf", cutoff_time)
+        # 对于这种使用expire的key，定期清理意义不大，因为过期自动处理
+        # 如果要额外清理，可选实现（按需省略）
+        pass

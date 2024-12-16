@@ -1,0 +1,35 @@
+version: '3'
+
+services:
+  node-serve-front:
+    image: llinkedlist/python-rev-front:v1
+    ports:
+      - "8090:8080"
+    volumes:
+      - .:/workspace
+    restart: always
+    command: >
+             python /workspace/main.py --port 8080
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+
+  redis:
+    image: redis
+    restart: always
+    environment:
+      TZ: Asia/Shanghai
+    volumes:
+      - ./data/redis/:/data/
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  redis_data:
+    driver: local

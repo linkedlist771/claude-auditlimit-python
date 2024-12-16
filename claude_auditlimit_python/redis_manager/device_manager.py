@@ -22,7 +22,7 @@ class DeviceInfo:
 
 
 class DeviceManager(BaseRedisManager):
-    DEVICE_EXPIRE = timedelta(days=7)
+    DEVICE_EXPIRE = timedelta(days=2)
 
     def _generate_device_hash(self, identifier: str) -> str:
         return hashlib.sha256(identifier.encode()).hexdigest()
