@@ -7,8 +7,14 @@ requires-python = ">=3.12"
 dependencies = [
     "apscheduler>=3.11.0",
     "fastapi>=0.115.6",
+    "fire>=0.7.0",
+    "httpx>=0.28.1",
+    "loguru>=0.7.3",
     "matplotlib>=3.10.0",
     "python-docx>=1.1.2",
     "pytz>=2024.2",
+    "redis>=5.2.1",
     "tiktoken>=0.8.0",
+    "tqdm>=4.67.1",
+    "uvicorn>=0.34.0",
 ]
