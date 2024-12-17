@@ -5,12 +5,24 @@ from claude_auditlimit_python.configs import REDIS_HOST, REDIS_PORT, REDIS_DB
 
 
 class BaseRedisManager:
+    # Class-level cache to store instances
+    _instances = {}
+
+    def __new__(cls, host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB):
+        """Implement singleton pattern for each unique connection configuration."""
+        key = (cls.__name__, host, port, db)
+        if key not in cls._instances:
+            cls._instances[key] = super().__new__(cls)
+        return cls._instances[key]
+
     def __init__(self, host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB):
         """Initialize the connection to Redis."""
-        self.host = host
-        self.port = port
-        self.db = db
-        self.aioredis = None
+        # Only initialize if not already initialized
+        if not hasattr(self, 'host'):
+            self.host = host
+            self.port = port
+            self.db = db
+            self.aioredis = None
 
     async def get_aioredis(self):
         if self.aioredis is None:
