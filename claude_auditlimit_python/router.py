@@ -1,35 +1,83 @@
 # router.py
+import json
 from json import JSONDecodeError
 from loguru import logger
+import re
 
 from fastapi import APIRouter, HTTPException
 from fastapi import Request
 from fastapi.responses import JSONResponse
-
 from datetime import datetime
-
 from claude_auditlimit_python.configs import MAX_DEVICES, RATE_LIMIT
 from claude_auditlimit_python.redis_manager.device_manager import DeviceManager
+from claude_auditlimit_python.redis_manager.token_usage_manager import TokenUsageManager
 from claude_auditlimit_python.redis_manager.usage_manager import UsageManager
 from claude_auditlimit_python.utils.api_key_utils import remove_beamer
+from claude_auditlimit_python.utils.token_utils import get_token_length
 
 router = APIRouter()
-
 
 @router.get("/")
 async def _():
     return "Hi this is from claude audit limit python-version"
 
 
+# DOCUMENT_NOTIFY_URL
+# RESPONSE_NOTIFY_URL
+@router.api_route("/document_notify", methods=["POST"])
+async def document_notify(request: Request):
+    # TODO: 通过refer 判断对话来自哪个对话， 然后加起来， 用以计算token。
+    api_key = request.headers.get("Authorization", None)
+    api_key = remove_beamer(api_key)
+    request_data = await request.json()
+    logger.debug(f"request_data from document_notify: \n{request_data}")
+    text = request_data.get("ExtractedContent", "")
+    token_usage = get_token_length(text)
+    usage_manager = UsageManager()  # Configure host as needed
+    # await usage_manager.increment_token_usage(api_key, token_usage)
+    conversation_uuid = dict(request.headers).get("referer", "")
+    if conversation_uuid:
+        conversation_uuid = conversation_uuid.split("/")[-1]
+    logger.debug(f"conversation_uuid:{conversation_uuid}")
+    token_manager = TokenUsageManager()
+    await token_manager.increment_token_usage(api_key, conversation_uuid,  token_usage)
+    accumulative_token_usage = await token_manager.get_token_usage(api_key, conversation_uuid)
+    await usage_manager.increment_token_usage(api_key, accumulative_token_usage)
+
+
+@router.api_route("/response_notify", methods=["POST"])
+async def response_notify(request: Request):
+    api_key = request.headers.get("Authorization", None)
+    api_key = remove_beamer(api_key)
+    request_data = await request.json()
+    logger.debug(f"request_data from response_notify: \n{request_data}")
+    text_values = re.findall(r'"text":"(.*?)"', request_data['Data'])
+    # 拼接提取的文本
+    # 拼接提取的文本
+    result = "".join(text_values)
+    token_usage = get_token_length(result)
+    logger.debug(f"api_key:\n{api_key}")
+    logger.debug(f"response usage:\n{token_usage}")
+    usage_manager = UsageManager()  # Configure host as needed
+    conversation_uuid = dict(request.headers).get("referer", "")
+    if conversation_uuid:
+        conversation_uuid = conversation_uuid.split("/")[-1]
+    logger.debug(f"conversation_uuid:{conversation_uuid}")
+    token_manager = TokenUsageManager()
+    await token_manager.increment_token_usage(api_key, conversation_uuid,  token_usage)
+    accumulative_token_usage = await token_manager.get_token_usage(api_key, conversation_uuid)
+    await usage_manager.increment_token_usage(api_key, accumulative_token_usage)
+
 @router.api_route("/audit_limit", methods=["GET", "POST"])
 async def audit_limit(request: Request):
     api_key = request.headers.get("Authorization", None)
+    api_key = remove_beamer(api_key)
+
     host = (
         request.headers.get("X-Forwarded-Host")
         if request.headers.get("X-Forwarded-Host", None)
         else request.url.hostname
     )
-    api_key = remove_beamer(api_key)
     # "User-Agent"
     user_agent = request.headers.get("User-Agent")
     if not host or not user_agent:
@@ -65,6 +113,7 @@ async def audit_limit(request: Request):
     # 获取请求内容
     try:
         request_data = await request.json()
+        logger.debug(f"request_data: \n{request_data}")
         # 获取 action - 判断请求类型
         action = request_data.get("action", "")
 
@@ -106,23 +155,34 @@ async def audit_limit(request: Request):
                         content={
                             "error": {
                                 "message": f"Usage limit exceeded. Current limit is {RATE_LIMIT} "
-                                f"requests per 3 hours. Please wait {wait_seconds} seconds. "
-                                f"您已触发使用频率限制，当前限制为{RATE_LIMIT}次/3小时，"
+                                f"tokens per 3 hours. Please wait {wait_seconds} seconds. "
+                                f"您已触发使用频率限制，当前限制为{RATE_LIMIT}token/3小时，"
                                 f"请等待{wait_seconds}秒后重试。"
                             }
                         },
                     )
 
                 # Increment usage if within limits
-                await usage_manager.increment_token_usage(api_key)
+                token_usage = get_token_length(prompt)
 
-                # return JSONResponse(
-                #     status_code=200,
-                #     content={
-                #         "message": "Request authorized",
-                #         "remaining": remaining - 1,
-                #     },
-                # )
+                attachments = request_data.get("raw_message", {}).get("attachments", [])
+                if attachments:
+                    attachments_text = "".join(
+                        [attach['extracted_content'] for attach in attachments]
+                    )
+                    attach_token_usage = get_token_length(attachments_text)
+                    token_usage += attach_token_usage
+                logger.debug(f"api_key:\n{api_key}")
+                logger.debug(f"input usage:\n{token_usage}")
+                conversation_uuid = dict(request.headers).get("referer", "")
+                if conversation_uuid:
+                    conversation_uuid = conversation_uuid.split("/")[-1]
+                logger.debug(f"conversation_uuid:{conversation_uuid}")
+                token_manager = TokenUsageManager()
+                await token_manager.increment_token_usage(api_key, conversation_uuid, token_usage)
+                accumulative_token_usage = await token_manager.get_token_usage(api_key, conversation_uuid)
+                await usage_manager.increment_token_usage(api_key, accumulative_token_usage)
+
                 return
             except Exception as e:
                 raise HTTPException(
@@ -260,3 +320,10 @@ async def all_token_devices(request: Request):
     stats.sort(key=lambda x: x["total"], reverse=True)
 
     return JSONResponse(content={"code": 0, "msg": "Success", "data": stats})
+
+@router.get("/all_token_usage")
+async def all_token_usage():
+    token_manager = TokenUsageManager()
+
+    all_usage = await token_manager.get_all_token_usage()
+    return all_usage

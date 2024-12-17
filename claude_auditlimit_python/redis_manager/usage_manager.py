@@ -96,8 +96,3 @@ class UsageManager(BaseRedisManager):
             result[token] = stats
 
         return result
-
-    async def cleanup_old_records(self) -> None:
-        # 对于这种使用expire的key，定期清理意义不大，因为过期自动处理
-        # 如果要额外清理，可选实现（按需省略）
-        pass

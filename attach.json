@@ -1,0 +1,234 @@
+{
+  "Data": "event: message_start\n",
+  "events": [
+    {
+      "type": "message_start",
+      "message": {
+        "id": "chatcompl_015kUH9Av3JcLmHsmkGGXzBa",
+        "type": "message",
+        "role": "assistant",
+        "model": "",
+        "parent_uuid": "d35022bd-2301-487b-872d-d23920f0f633",
+        "uuid": "6bb28b17-a533-4a77-af8f-d991ede9ab90",
+        "content": [],
+        "stop_reason": null,
+        "stop_sequence": null
+      }
+    },
+    {
+      "type": "content_block_start",
+      "index": 0,
+      "content_block": {
+        "type": "text",
+        "text": ""
+      }
+    },
+    {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+        "type": "text_delta",
+        "text": " 这是一个"
+      }
+    },
+    {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+        "type": "text_delta",
+        "text": "模仿 Poe "
+      }
+    },
+    {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+        "type": "text_delta",
+        "text": "聊天界面的 HTML 页面，主"
+      }
+    },
+    {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+        "type": "text_delta",
+        "text": "要包含：\\n\\n顶部栏：\\n- "
+      }
+    },
+    {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+        "type": "text_delta",
+        "text": "显示连接信息和页面标题"
+      }
+    },
+    {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+        "type": "text_delta",
+        "text": "\\n\\n左侧边栏：\\n-"
+      }
+    },
+    {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+        "type": "text_delta",
+        "text": " Poe 标题和\\\""
+      }
+    },
+    {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+        "type": "text_delta",
+        "text": "New chat\\\"按钮\\n- "
+      }
+    },
+    {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+        "type": "text_delta",
+        "text": "聊天历史列表，包"
+      }
+    },
+    {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+        "type": "text_delta",
+        "text": "含7条历史记录\\n\\n主内容区："
+      }
+    },
+    {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+        "type": "text_delta",
+        "text": "\\n- 标题显示\\\"Claude-3.5"
+      }
+    },
+    {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+        "type": "text_delta",
+        "text": "-Sonnet\\\"\\n- 介"
+      }
+    },
+    {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+        "type": "text_delta",
+        "text": "绍文本描述模型特点\\n- 底"
+      }
+    },
+    {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+        "type": "text_delta",
+        "text": "部有输入框和发送按钮"
+      }
+    },
+    {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+        "type": "text_delta",
+        "text": "\\n\\n样式设计：\\n- 使"
+      }
+    },
+    {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+        "type": "text_delta",
+        "text": "用浅色主题\\n- 响"
+      }
+    },
+    {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+        "type": "text_delta",
+        "text": "应式布局\\n- 自"
+      }
+    },
+    {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+        "type": "text_delta",
+        "text": "定义滚动条样式\\n- 清"
+      }
+    },
+    {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+        "type": "text_delta",
+        "text": "晰的边框和阴影分"
+      }
+    },
+    {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+        "type": "text_delta",
+        "text": "隔\\n\\n页面语言设"
+      }
+    },
+    {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+        "type": "text_delta",
+        "text": "置为中文，整体布局模"
+      }
+    },
+    {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+        "type": "text_delta",
+        "text": "仿了常见的聊天应"
+      }
+    },
+    {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+        "type": "text_delta",
+        "text": "用界面。"
+      }
+    },
+    {
+      "type": "content_block_stop",
+      "index": 0
+    },
+    {
+      "type": "message_delta",
+      "delta": {
+        "stop_reason": "end_turn",
+        "stop_sequence": null
+      }
+    },
+    {
+      "type": "message_limit",
+      "message_limit": {
+        "type": "within_limit",
+        "resetsAt": null,
+        "remaining": null,
+        "perModelLimit": null
+      }
+    },
+    {
+      "type": "message_stop"
+    }
+  ]
+}
