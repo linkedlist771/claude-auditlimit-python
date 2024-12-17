@@ -212,16 +212,13 @@ async def token_stats(request: Request):
     try:
         # Initialize usage manager
         usage_manager = UsageManager()
-
         # Get all token usage statistics
         usage_stats = await usage_manager.get_all_token_usage()
         logger.debug(usage_stats)
         # Get current time
         now = datetime.now()
-
         # Prepare response data
         stats = []
-
         # Process usage stats
         for token, usage in usage_stats.items():
             # 硬编码 active 和 last_seen
