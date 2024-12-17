@@ -17,6 +17,7 @@ from claude_auditlimit_python.utils.token_utils import get_token_length
 
 router = APIRouter()
 
+
 @router.get("/")
 async def _():
     return "Hi this is from claude audit limit python-version"
@@ -40,8 +41,10 @@ async def document_notify(request: Request):
         conversation_uuid = conversation_uuid.split("/")[-1]
     logger.debug(f"conversation_uuid:{conversation_uuid}")
     token_manager = TokenUsageManager()
-    await token_manager.increment_token_usage(api_key, conversation_uuid,  token_usage)
-    accumulative_token_usage = await token_manager.get_token_usage(api_key, conversation_uuid)
+    await token_manager.increment_token_usage(api_key, conversation_uuid, token_usage)
+    accumulative_token_usage = await token_manager.get_token_usage(
+        api_key, conversation_uuid
+    )
     await usage_manager.increment_token_usage(api_key, accumulative_token_usage)
 
 
@@ -51,7 +54,7 @@ async def response_notify(request: Request):
     api_key = remove_beamer(api_key)
     request_data = await request.json()
     logger.debug(f"request_data from response_notify: \n{request_data}")
-    text_values = re.findall(r'"text":"(.*?)"', request_data['Data'])
+    text_values = re.findall(r'"text":"(.*?)"', request_data["Data"])
     # 拼接提取的文本
     # 拼接提取的文本
     result = "".join(text_values)
@@ -64,9 +67,12 @@ async def response_notify(request: Request):
         conversation_uuid = conversation_uuid.split("/")[-1]
     logger.debug(f"conversation_uuid:{conversation_uuid}")
     token_manager = TokenUsageManager()
-    await token_manager.increment_token_usage(api_key, conversation_uuid,  token_usage)
-    accumulative_token_usage = await token_manager.get_token_usage(api_key, conversation_uuid)
+    await token_manager.increment_token_usage(api_key, conversation_uuid, token_usage)
+    accumulative_token_usage = await token_manager.get_token_usage(
+        api_key, conversation_uuid
+    )
     await usage_manager.increment_token_usage(api_key, accumulative_token_usage)
+
 
 @router.api_route("/audit_limit", methods=["GET", "POST"])
 async def audit_limit(request: Request):
@@ -168,7 +174,7 @@ async def audit_limit(request: Request):
                 attachments = request_data.get("raw_message", {}).get("attachments", [])
                 if attachments:
                     attachments_text = "".join(
-                        [attach['extracted_content'] for attach in attachments]
+                        [attach["extracted_content"] for attach in attachments]
                     )
                     attach_token_usage = get_token_length(attachments_text)
                     token_usage += attach_token_usage
@@ -179,9 +185,15 @@ async def audit_limit(request: Request):
                     conversation_uuid = conversation_uuid.split("/")[-1]
                 logger.debug(f"conversation_uuid:{conversation_uuid}")
                 token_manager = TokenUsageManager()
-                await token_manager.increment_token_usage(api_key, conversation_uuid, token_usage)
-                accumulative_token_usage = await token_manager.get_token_usage(api_key, conversation_uuid)
-                await usage_manager.increment_token_usage(api_key, accumulative_token_usage)
+                await token_manager.increment_token_usage(
+                    api_key, conversation_uuid, token_usage
+                )
+                accumulative_token_usage = await token_manager.get_token_usage(
+                    api_key, conversation_uuid
+                )
+                await usage_manager.increment_token_usage(
+                    api_key, accumulative_token_usage
+                )
 
                 return
             except Exception as e:
@@ -321,9 +333,9 @@ async def all_token_devices(request: Request):
 
     return JSONResponse(content={"code": 0, "msg": "Success", "data": stats})
 
+
 @router.get("/all_token_usage")
 async def all_token_usage():
     token_manager = TokenUsageManager()
-
     all_usage = await token_manager.get_all_token_usage()
     return all_usage

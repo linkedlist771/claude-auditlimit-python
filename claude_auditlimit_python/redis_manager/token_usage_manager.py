@@ -31,7 +31,9 @@ class TokenUsageManager(BaseRedisManager):
 
         return int(value)
 
-    async def increment_token_usage(self, apikey: str, uuid: str, increment: int = 1) -> int:
+    async def increment_token_usage(
+        self, apikey: str, uuid: str, increment: int = 1
+    ) -> int:
         """
         Increment token usage for specific apikey and uuid by given amount.
         Returns new value after increment.
@@ -50,7 +52,9 @@ class TokenUsageManager(BaseRedisManager):
         new_value = await redis.incrby(key, increment)
         return new_value
 
-    async def get_all_token_usage(self, apikey: Optional[str] = None) -> Dict[str, Dict[str, int]]:
+    async def get_all_token_usage(
+        self, apikey: Optional[str] = None
+    ) -> Dict[str, Dict[str, int]]:
         """
         Get all token usages.
         If apikey is provided, get all uuid token usages for that apikey.
@@ -100,6 +104,7 @@ class TokenUsageManager(BaseRedisManager):
                     result[current_apikey][uuid_str] = int(value) if value else 0
 
             return result
+
 
 # # 初始化
 # manager = TokenUsageManager()
