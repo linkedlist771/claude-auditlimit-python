@@ -27,25 +27,26 @@ async def _():
 # RESPONSE_NOTIFY_URL
 @router.api_route("/document_notify", methods=["POST"])
 async def document_notify(request: Request):
-    # TODO: 通过refer 判断对话来自哪个对话， 然后加起来， 用以计算token。
-    api_key = request.headers.get("Authorization", None)
-    api_key = remove_beamer(api_key)
-    request_data = await request.json()
-    logger.debug(f"request_data from document_notify: \n{request_data}")
-    text = request_data.get("ExtractedContent", "")
-    token_usage = get_token_length(text)
-    usage_manager = UsageManager()  # Configure host as needed
-    # await usage_manager.increment_token_usage(api_key, token_usage)
-    conversation_uuid = dict(request.headers).get("referer", "")
-    if conversation_uuid:
-        conversation_uuid = conversation_uuid.split("/")[-1]
-    logger.debug(f"conversation_uuid:{conversation_uuid}")
-    token_manager = TokenUsageManager()
-    await token_manager.increment_token_usage(api_key, conversation_uuid, token_usage)
-    accumulative_token_usage = await token_manager.get_token_usage(
-        api_key, conversation_uuid
-    )
-    await usage_manager.increment_token_usage(api_key, accumulative_token_usage)
+    pass
+    # # TODO: 通过refer 判断对话来自哪个对话， 然后加起来， 用以计算token。
+    # api_key = request.headers.get("Authorization", None)
+    # api_key = remove_beamer(api_key)
+    # request_data = await request.json()
+    # logger.debug(f"request_data from document_notify: \n{request_data}")
+    # text = request_data.get("ExtractedContent", "")
+    # token_usage = get_token_length(text)
+    # usage_manager = UsageManager()  # Configure host as needed
+    # # await usage_manager.increment_token_usage(api_key, token_usage)
+    # conversation_uuid = dict(request.headers).get("referer", "")
+    # if conversation_uuid:
+    #     conversation_uuid = conversation_uuid.split("/")[-1]
+    # logger.debug(f"conversation_uuid:{conversation_uuid}")
+    # token_manager = TokenUsageManager()
+    # await token_manager.increment_token_usage(api_key, conversation_uuid, token_usage)
+    # accumulative_token_usage = await token_manager.get_token_usage(
+    #     api_key, conversation_uuid
+    # )
+    # await usage_manager.increment_token_usage(api_key, accumulative_token_usage)
 
 
 @router.api_route("/response_notify", methods=["POST"])
