@@ -163,7 +163,7 @@ async def audit_limit(request: Request):
                             "error": {
                                 "message": f"Usage limit exceeded. Current limit is {RATE_LIMIT} "
                                 f"tokens per 3 hours. Please wait {wait_seconds} seconds. "
-                                f"您已触发使用频率限制，当前限制为{RATE_LIMIT}tokens/3小时，"
+                                f"您已触发使用频率限制，当前限制为{RATE_LIMIT} tokens/3小时，"
                                 f"请等待{wait_seconds}秒后重试。"
                             }
                         },
