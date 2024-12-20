@@ -8,10 +8,11 @@ from fastapi import APIRouter, HTTPException
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from datetime import datetime
-from claude_auditlimit_python.configs import MAX_DEVICES, RATE_LIMIT
+from claude_auditlimit_python.configs import MAX_DEVICES, RATE_LIMIT, USAGE_RECORD_RATE_LIMIT
 from claude_auditlimit_python.redis_manager.device_manager import DeviceManager
 from claude_auditlimit_python.redis_manager.token_usage_manager import TokenUsageManager
 from claude_auditlimit_python.redis_manager.usage_manager import UsageManager
+from claude_auditlimit_python.redis_manager.usage_record_manager import UsageRecordManager
 from claude_auditlimit_python.utils.api_key_utils import remove_beamer
 from claude_auditlimit_python.utils.token_utils import get_token_length
 
@@ -139,8 +140,8 @@ async def audit_limit(request: Request):
                     prompt = parts[0]
         if "claude" in model.lower():
             # Initialize usage manager
-            usage_manager = UsageManager()  # Configure host as needed
             try:
+                usage_manager = UsageManager()  # Configure host as needed
                 # Get current usage stats
                 stats = await usage_manager.get_token_usage(api_key)
                 # Get configured limit from settings
@@ -195,6 +196,35 @@ async def audit_limit(request: Request):
                 await usage_manager.increment_token_usage(
                     api_key, accumulative_token_usage
                 )
+
+                # Add the usage calculation here
+                usage_record = UsageRecordManager()
+
+                current_usage = await usage_record.get_usage(api_key)
+                used_3h = current_usage.last_3_hours
+                remaining = USAGE_RECORD_RATE_LIMIT - used_3h
+                if remaining <= 0:
+                    # Calculate wait time
+                    redis = await usage_record.get_aioredis()
+                    key = usage_record._get_redis_key(
+                        api_key, usage_record.PERIOD_3HOURS
+                    )
+                    ttl = await redis.ttl(key)
+
+                    wait_seconds = max(ttl, 0)
+
+                    return JSONResponse(
+                        status_code=429,
+                        content={
+                            "error": {
+                                "message": f"Usage limit exceeded. Current limit is {USAGE_RECORD_RATE_LIMIT} "
+                                f"per 3 hours. Please wait {wait_seconds} seconds. "
+                                f"您已触发使用频率限制，当前限制为{USAGE_RECORD_RATE_LIMIT} 次/3小时，"
+                                f"请等待{wait_seconds}秒后重试。"
+                            }
+                        },
+                    )
+                await usage_record.increment_usage(api_key)
 
                 return
             except Exception as e:

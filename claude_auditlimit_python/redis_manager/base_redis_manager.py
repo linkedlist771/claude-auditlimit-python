@@ -18,7 +18,7 @@ class BaseRedisManager:
     def __init__(self, host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB):
         """Initialize the connection to Redis."""
         # Only initialize if not already initialized
-        if not hasattr(self, 'host'):
+        if not hasattr(self, "host"):
             self.host = host
             self.port = port
             self.db = db

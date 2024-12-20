@@ -14,7 +14,11 @@ DOCS_PASSWORD = "20Wd!!!!"
 
 # 三小时
 CLAUDE_OFFICIAL_EXPIRE_TIME = 3 * 60 * 60
-RATE_LIMIT = 180 * 10000  # 6w tokens for 3 hours # token limit for the 3 hours  # Configure this value as needed
+RATE_LIMIT = (
+    180 * 10000
+)  # 6w tokens for 3 hours # token limit for the 3 hours  # Configure this value as needed
+
+USAGE_RECORD_RATE_LIMIT = 45
 DEFAULT_TOKENIZER = "cl100k_base"
 
 

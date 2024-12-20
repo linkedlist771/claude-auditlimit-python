@@ -104,16 +104,3 @@ class TokenUsageManager(BaseRedisManager):
                     result[current_apikey][uuid_str] = int(value) if value else 0
 
             return result
-
-
-# # 初始化
-# manager = TokenUsageManager()
-#
-# # 获取使用量(不存在会创建新记录)
-# usage = await manager.get_token_usage("my_apikey", uuid_obj)
-#
-# # 增加使用量
-# new_value = await manager.increment_token_usage("my_apikey", uuid_obj, 5)
-#
-# # 获取某个apikey下所有uuid的使用量
-# all_usage = await manager.get_all_token_usage("my_apikey")
