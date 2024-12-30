@@ -239,20 +239,22 @@ async def audit_limit(request: Request):
 
 
 @router.get("/token_stats")
-async def token_stats(request: Request):
+async def token_stats(request: Request, usage_type: str = "token_usage"):
     try:
-        # Initialize usage manager
-        usage_manager = UsageManager()
+        # Initialize appropriate manager based on usage_type
+        if usage_type == "record_usage":
+            usage_manager = UsageRecordManager()
+        else:  # default to token_usage
+            usage_manager = UsageManager()
+            
         # Get all token usage statistics
         usage_stats = await usage_manager.get_all_token_usage()
         logger.debug(usage_stats)
-        # Get current time
-        now = datetime.now()
+        
         # Prepare response data
         stats = []
         # Process usage stats
         for token, usage in usage_stats.items():
-            # 硬编码 active 和 last_seen
             stat = {
                 "token": token,
                 "usage": {
