@@ -3,6 +3,7 @@ import json
 from json import JSONDecodeError
 from loguru import logger
 import re
+from typing import Dict
 
 from fastapi import APIRouter, HTTPException
 from fastapi import Request
@@ -398,26 +399,13 @@ async def get_conversations(api_key: str, conversation_id: str = None):
     """
     try:
         conversation_manager = ConversationsManager()
+        conversations = await conversation_manager.get_conversations(api_key, conversation_id)
         
-        if conversation_id:
-            conversation = await conversation_manager.get_conversation(api_key, conversation_id)
-            return JSONResponse(
-                content={
-                    "code": 0,
-                    "msg": "Success",
-                    "data": conversation.model_dump()
-                }
-            )
-        
-        conversations = await conversation_manager.get_all_conversations(api_key)
         return JSONResponse(
             content={
-                "code": 0, 
+                "code": 0,
                 "msg": "Success",
-                "data": {
-                    uuid: conv.model_dump() 
-                    for uuid, conv in conversations.items()
-                }
+                "data": conversations
             }
         )
 
@@ -428,6 +416,34 @@ async def get_conversations(api_key: str, conversation_id: str = None):
             content={
                 "code": 500,
                 "msg": "Failed to get conversations",
+                "error": str(e)
+            }
+        )
+
+
+@router.get("/conversations_all")
+async def get_all_users_conversations():
+    """
+    Get all conversations for all users.
+    Returns a nested dictionary with apikey and conversation uuid as keys.
+    """
+    try:
+        conversations_manager = ConversationsManager()
+        conversations = await conversations_manager.get_all_users_conversations()
+        return JSONResponse(
+            content={
+                "code": 0,
+                "msg": "Success",
+                "data": conversations
+            }
+        )
+    except Exception as e:
+        logger.error(f"Error getting all conversations: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "code": 500,
+                "msg": "Failed to get all conversations",
                 "error": str(e)
             }
         )
