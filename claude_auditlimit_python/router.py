@@ -8,11 +8,19 @@ from fastapi import APIRouter, HTTPException
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from datetime import datetime
-from claude_auditlimit_python.configs import MAX_DEVICES, RATE_LIMIT, USAGE_RECORD_RATE_LIMIT
+from claude_auditlimit_python.configs import (
+    MAX_DEVICES,
+    RATE_LIMIT,
+    USAGE_RECORD_RATE_LIMIT,
+)
+from claude_auditlimit_python.redis_manager.conversations_manager import ConversationsManager
 from claude_auditlimit_python.redis_manager.device_manager import DeviceManager
 from claude_auditlimit_python.redis_manager.token_usage_manager import TokenUsageManager
 from claude_auditlimit_python.redis_manager.usage_manager import UsageManager
-from claude_auditlimit_python.redis_manager.usage_record_manager import UsageRecordManager
+from claude_auditlimit_python.redis_manager.usage_record_manager import (
+    UsageRecordManager,
+)
+from claude_auditlimit_python.schemas import Conversation, Message
 from claude_auditlimit_python.utils.api_key_utils import remove_beamer
 from claude_auditlimit_python.utils.token_utils import get_token_length
 
@@ -75,6 +83,9 @@ async def response_notify(request: Request):
     )
     await usage_manager.increment_token_usage(api_key, accumulative_token_usage)
 
+    conversation_manager = ConversationsManager()
+    await conversation_manager.add_message(api_key, conversation_uuid, Message(role="assistant", content=result))
+    logger.debug(f"assistant message added to conversation {conversation_uuid}")
 
 @router.api_route("/audit_limit", methods=["GET", "POST"])
 async def audit_limit(request: Request):
@@ -172,7 +183,9 @@ async def audit_limit(request: Request):
 
                 # Increment usage if within limits
                 token_usage = get_token_length(prompt)
-
+                conversation_manager = ConversationsManager()
+                attachments_text = ""
+                # init this message and add 
                 attachments = request_data.get("raw_message", {}).get("attachments", [])
                 if attachments:
                     attachments_text = "".join(
@@ -186,6 +199,11 @@ async def audit_limit(request: Request):
                 if conversation_uuid:
                     conversation_uuid = conversation_uuid.split("/")[-1]
                 logger.debug(f"conversation_uuid:{conversation_uuid}")
+                to_add_message = Message(role="user", content=prompt, attachments=attachments_text)
+                await conversation_manager.add_message(
+                    api_key, conversation_uuid, to_add_message
+                )
+                logger.debug(f"user message added to conversation {conversation_uuid}")
                 token_manager = TokenUsageManager()
                 await token_manager.increment_token_usage(
                     api_key, conversation_uuid, token_usage
@@ -246,11 +264,11 @@ async def token_stats(request: Request, usage_type: str = "token_usage"):
             usage_manager = UsageRecordManager()
         else:  # default to token_usage
             usage_manager = UsageManager()
-            
+
         # Get all token usage statistics
         usage_stats = await usage_manager.get_all_token_usage()
         logger.debug(usage_stats)
-        
+
         # Prepare response data
         stats = []
         # Process usage stats
@@ -369,3 +387,47 @@ async def all_token_usage():
     token_manager = TokenUsageManager()
     all_usage = await token_manager.get_all_token_usage()
     return all_usage
+
+
+@router.get("/conversations/{api_key}")
+async def get_conversations(api_key: str, conversation_id: str = None):
+    """
+    Get conversations for a specific API key.
+    If conversation_id is provided, returns that specific conversation.
+    Otherwise returns all conversations for the API key.
+    """
+    try:
+        conversation_manager = ConversationsManager()
+        
+        if conversation_id:
+            conversation = await conversation_manager.get_conversation(api_key, conversation_id)
+            return JSONResponse(
+                content={
+                    "code": 0,
+                    "msg": "Success",
+                    "data": conversation.model_dump()
+                }
+            )
+        
+        conversations = await conversation_manager.get_all_conversations(api_key)
+        return JSONResponse(
+            content={
+                "code": 0, 
+                "msg": "Success",
+                "data": {
+                    uuid: conv.model_dump() 
+                    for uuid, conv in conversations.items()
+                }
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"Error getting conversations: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "code": 500,
+                "msg": "Failed to get conversations",
+                "error": str(e)
+            }
+        )

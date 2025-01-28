@@ -9,7 +9,6 @@ class UsageStats(TokenUsageStats):
     pass
 
 
-
 class UsageRecordManager(UsageManager):
     def _get_redis_key(self, identifier: str, period: str) -> str:
         # 只需要修改key前缀，从"token"改为"usage"
